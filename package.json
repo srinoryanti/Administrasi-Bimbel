@@ -3,9 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "description": "Sistem Informasi Manajemen Bimbel Rumah Pintar — Render (Express + client) + Cloudflare D1 + Backblaze B2",
+  "engines": {
+    "node": ">=22.5"
+  },
   "scripts": {
     "dev": "npm run dev --prefix server",
     "dev:client": "npm run dev --prefix client",
+    "build": "npm install --prefix client --include=dev && npm run build --prefix client && npm install --prefix server --include=dev",
     "build:client": "npm run build --prefix client",
     "start": "npm start --prefix server",
     "seed": "npm run seed --prefix server",
