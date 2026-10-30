@@ -1,23 +1,32 @@
 'use strict';
 const path = require('path');
 const { createLocalDb } = require('./drivers/local');
-const { createD1Db } = require('./drivers/d1');
+const { createD1Db, createD1BindingDb } = require('./drivers/d1');
 
 // Pilih driver dari env:
-// - Produksi (Render) : set D1_ACCOUNT_ID/D1_API_TOKEN/D1_DATABASE_ID -> driver D1 (REST).
-// - Lokal (dev)       : tanpa env D1 -> node:sqlite file (server/data/bimbel.db).
+// - Cloudflare Workers: binding D1 (globalThis.__CF_D1__, diset entry worker) → binding driver.
+// - Produksi (REST)    : set D1_ACCOUNT_ID/D1_API_TOKEN/D1_DATABASE_ID → driver D1 (REST).
+// - Lokal (dev)        : tanpa env D1 → node:sqlite file (server/data/bimbel.db).
+const d1Binding = globalThis.__CF_D1__ || null;
 const useD1 = !!(process.env.D1_ACCOUNT_ID && process.env.D1_API_TOKEN && process.env.D1_DATABASE_ID);
 
-const DATA_DIR = path.join(__dirname, '..', 'data');
-const DB_PATH = process.env.DB_PATH || path.join(DATA_DIR, 'bimbel.db');
+let DB_PATH;
+if (d1Binding) {
+  DB_PATH = null; // Workers: lewat binding D1, file SQLite tidak dipakai.
+} else {
+  const DATA_DIR = path.join(typeof __dirname !== 'undefined' ? __dirname : '.', '..', 'data');
+  DB_PATH = process.env.DB_PATH || path.join(DATA_DIR, 'bimbel.db');
+}
 
-const db = useD1
-  ? createD1Db({
-      accountId: process.env.D1_ACCOUNT_ID,
-      apiToken: process.env.D1_API_TOKEN,
-      databaseId: process.env.D1_DATABASE_ID,
-    })
-  : createLocalDb(DB_PATH);
+const db = d1Binding
+  ? createD1BindingDb(d1Binding)
+  : useD1
+    ? createD1Db({
+        accountId: process.env.D1_ACCOUNT_ID,
+        apiToken: process.env.D1_API_TOKEN,
+        databaseId: process.env.D1_DATABASE_ID,
+      })
+    : createLocalDb(DB_PATH);
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS roles (

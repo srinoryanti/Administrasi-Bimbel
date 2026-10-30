@@ -1,6 +1,10 @@
 'use strict';
-require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
-require('dotenv').config();
+try {
+  require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
+  require('dotenv').config();
+} catch (e) {
+  // Di Cloudflare Workers fs tidak tersedia — env datang dari binding.
+}
 const path = require('path');
 const fs = require('fs');
 const express = require('express');
@@ -13,10 +17,67 @@ const { requireAuth } = require('./middleware/auth');
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+// Parser JSON sendiri (body-parser/iconv-lite tidak ter-bundle bersih di Cloudflare Workers).
+function jsonBody(limit = 2 * 1024 * 1024) {
+  return (req, res, next) => {
+    if (req._body) return next();
+    req.body = {};
+    const type = req.headers['content-type'] || '';
+    if (!/^application\/json\b/i.test(type)) return next();
+    const chunks = [];
+    let size = 0;
+    let settled = false;
+    const fail = (err) => {
+      if (settled) return;
+      settled = true;
+      next(err);
+    };
+    req.on('data', (chunk) => {
+      size += chunk.length;
+      if (size > limit) {
+        const err = new Error('Payload terlalu besar (maksimal 2 MB).');
+        err.status = 413;
+        fail(err);
+        if (typeof req.pause === 'function') req.pause();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    req.on('end', () => {
+      if (settled) return;
+      settled = true;
+      if (!chunks.length) return next();
+      try {
+        const parsed = JSON.parse(Buffer.concat(chunks).toString('utf8'));
+        req.body = parsed === null || parsed === undefined ? {} : parsed;
+        req._body = true;
+        next();
+      } catch (e) {
+        const err = new Error('Body JSON tidak valid.');
+        err.status = 400;
+        next(err);
+      }
+    });
+    req.on('error', fail);
+  };
+}
+
 app.set('trust proxy', 1);
 app.use(cors({ origin: true, credentials: true }));
-app.use(express.json({ limit: '2mb' }));
+app.use(jsonBody());
 app.use(cookieParser());
+
+// Bootstrap skema+roles sebelum request pertama dilayani (Node & Workers sama).
+const ready = initSchema()
+  .then(() => {
+    console.log('bootstrap: schema ok');
+    return ensureRoles();
+  })
+  .then(() => console.log('bootstrap: roles ok'));
+
+app.use((req, res, next) => {
+  ready.then(() => next()).catch(next);
+});
 
 // Keamanan dasar header
 app.use((req, res, next) => {
@@ -106,32 +167,43 @@ app.post('/api/maintenance/purge-demo', requireAuth, asyncHandler(async (req, re
   res.json({ message: 'Data demo berhasil dihapus. Akun login demo tetap ada dan dapat dihapus manual dari menu Pengguna.' });
 }));
 
-// Serve build client (produksi)
-const clientDist = path.join(__dirname, '..', '..', 'client', 'dist');
-if (fs.existsSync(clientDist)) {
-  app.use(express.static(clientDist));
-  app.get(/^(?!\/api).*/, (req, res, next) => {
-    if (req.method !== 'GET') return next();
-    res.sendFile(path.join(clientDist, 'index.html'));
-  });
+// Serve build client (produksi) — hanya bila filesystem tersedia (Node).
+try {
+  const clientDist = path.join(__dirname, '..', '..', 'client', 'dist');
+  if (fs.existsSync(clientDist)) {
+    app.use(express.static(clientDist));
+    app.get(/^(?!\/api).*/, (req, res, next) => {
+      if (req.method !== 'GET') return next();
+      res.sendFile(path.join(clientDist, 'index.html'));
+    });
+  }
+} catch (e) {
+  // Workers: aset statis disediakan binding terpisah.
 }
 
 app.use(errorHandler);
 
-// Bootstrap database (skema idempoten + roles default) lalu jalankan server.
-initSchema()
-  .then(() => {
-    console.log('bootstrap: schema ok');
-    return ensureRoles();
-  })
-  .then(() => {
-    console.log('bootstrap: roles ok, listen...');
-    app.listen(PORT, () => {
-      console.log(`\n  Bimbel Rumah Pintar API berjalan di http://localhost:${PORT}`);
-      console.log(`  Database: ${db.backend === 'd1' ? 'Cloudflare D1' : DB_PATH}\n`);
-    });
-  })
-  .catch((e) => {
-    console.error('Gagal bootstrap database:', e);
-    process.exit(1);
+// Mode Node: listen setelah bootstrap sukses. Mode Workers: entry memanggil startServer().
+function startServer(port = PORT) {
+  return new Promise((resolve, reject) => {
+    ready
+      .then(() => {
+        const server = app.listen(Number(port), () => {
+          console.log(`\n  Bimbel Rumah Pintar API berjalan di http://localhost:${port}`);
+          console.log(`  Database: ${db.backend === 'd1' ? 'Cloudflare D1' : DB_PATH}\n`);
+          resolve(server);
+        });
+        server.on('error', reject);
+      })
+      .catch((e) => {
+        console.error('Gagal bootstrap database:', e);
+        reject(e);
+      });
   });
+}
+
+if (!process.env.CF_WORKER) {
+  startServer().catch(() => process.exit(1));
+}
+
+module.exports = { app, ready, startServer };

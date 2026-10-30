@@ -9,7 +9,8 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 
-const UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
+const __dirname_ = typeof __dirname !== 'undefined' ? __dirname : '.';
+const UPLOADS_DIR = path.join(__dirname_, '..', 'uploads');
 
 const useB2 = !!(process.env.B2_KEY_ID && process.env.B2_KEY && process.env.B2_BUCKET);
 

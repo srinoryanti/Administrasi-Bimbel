@@ -7,7 +7,8 @@ const { getSetting } = require('./db');
 // Parameter terakhir build*PDF adalah storage key (mis. `reports/rapor-X.pdf`).
 // Kompatibilitas: pemanggil lama (seed.js) mengirim path absolut di dalam server/uploads —
 // normalkan menjadi key relatif agar lokal tetap menulis di lokasi yang sama.
-const UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
+const __dirname_ = typeof __dirname !== 'undefined' ? __dirname : '.';
+const UPLOADS_DIR = path.join(__dirname_, '..', 'uploads');
 function targetKey(target) {
   if (path.isAbsolute(target)) {
     const rel = path.relative(UPLOADS_DIR, target);

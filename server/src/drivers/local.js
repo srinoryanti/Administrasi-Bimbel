@@ -1,12 +1,12 @@
 'use strict';
 const path = require('path');
 const fs = require('fs');
-const { DatabaseSync } = require('node:sqlite');
 
 // Driver lokal berbasis node:sqlite (DatabaseSync).
 // Menyamakan bentuk API dengan driver D1 (async) sehingga seluruh kode routes
 // dapat menulis `await stmt.run(...)` / `.get(...)` / `.all(...)` tanpa peduli backend.
 function createLocalDb(dbPath) {
+  const { DatabaseSync } = require('node:sqlite');
   const dir = path.dirname(dbPath);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   const raw = new DatabaseSync(dbPath);

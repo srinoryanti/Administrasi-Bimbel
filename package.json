@@ -17,5 +17,8 @@
     "seed:d1": "node scripts/seed-d1.js",
     "migrate:d1": "node scripts/migrate-to-d1.js",
     "create-admin": "npm run create-admin --prefix server"
+  },
+  "devDependencies": {
+    "wrangler": "^4.156.0"
   }
 }
