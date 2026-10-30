@@ -1,0 +1,5 @@
+[ERROR] POST /api/auth/login Email/username dan password wajib diisi.
+[ERROR] POST /api/attendance/sessions/58/attendance Hanya siswa yang terdaftar di kelas ini yang dapat diabsen.
+[ERROR] POST /api/billing/payments db.transaction is not a function
+[ERROR] GET /api/laporan/pembayaran/excel Out of bounds. Invalid column letter: BIMBELRUMAHPINTARPEMBAYARAN
+[ERROR] POST /api/auth/login Username/email atau password salah.

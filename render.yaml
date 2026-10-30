@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: bimbel-rumah-pintar
+    runtime: node
+    plan: free
+    buildCommand: "npm install --prefix client && npm run build --prefix client && npm install --prefix server"
+    startCommand: "npm start --prefix server"
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: D1_ACCOUNT_ID
+        sync: false
+      - key: D1_API_TOKEN
+        sync: false
+      - key: D1_DATABASE_ID
+        sync: false
+      - key: B2_KEY_ID
+        sync: false
+      - key: B2_KEY
+        sync: false
+      - key: B2_BUCKET
+        sync: false
+      - key: B2_REGION
+        value: us-west-002

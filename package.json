@@ -1,0 +1,17 @@
+{
+  "name": "bimbel-rumah-pintar",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sistem Informasi Manajemen Bimbel Rumah Pintar — Render (Express + client) + Cloudflare D1 + Backblaze B2",
+  "scripts": {
+    "dev": "npm run dev --prefix server",
+    "dev:client": "npm run dev --prefix client",
+    "build:client": "npm run build --prefix client",
+    "start": "npm start --prefix server",
+    "seed": "npm run seed --prefix server",
+    "seed:demo": "npm run seed:demo --prefix server",
+    "seed:d1": "node scripts/seed-d1.js",
+    "migrate:d1": "node scripts/migrate-to-d1.js",
+    "create-admin": "npm run create-admin --prefix server"
+  }
+}
