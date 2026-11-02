@@ -35,33 +35,29 @@ function createD1Db({ accountId, apiToken, databaseId }) {
     return json;
   }
 
-  function rowsOf(result) {
-    // result: { results: [...], meta: { last_row_id, changes, ... } }
-    return result && Array.isArray(result.results) ? result.results : [];
-  }
-
-  function metaOf(result) {
-    return (result && result.meta) || {};
+  // Respons /query: { success, errors, result: [ { results, meta, success } ] }
+  function listOf(json) {
+    if (Array.isArray(json && json.result)) return json.result;
+    if (Array.isArray(json && json.results)) return json.results;
+    return [];
   }
 
   function wrapStmt(sql) {
     return {
       async run(...params) {
-        const json = await post('/query', { sql: [sql], params });
-        const result = rowsOf(json)[0] || {};
-        const meta = metaOf(result);
+        const json = await post('/query', { sql, params });
+        const result = listOf(json)[0] || {};
+        const meta = result.meta || {};
         return { changes: Number(meta.changes || 0), lastInsertRowid: Number(meta.last_row_id || 0) };
       },
       async get(...params) {
-        const json = await post('/query', { sql: [sql], params });
-        const result = rowsOf(json)[0] || {};
-        const rows = rowsOf(result);
+        const json = await post('/query', { sql, params });
+        const rows = (listOf(json)[0] || {}).results || [];
         return rows.length ? rows[0] : undefined;
       },
       async all(...params) {
-        const json = await post('/query', { sql: [sql], params });
-        const result = rowsOf(json)[0] || {};
-        return rowsOf(result);
+        const json = await post('/query', { sql, params });
+        return (listOf(json)[0] || {}).results || [];
       },
     };
   }
@@ -70,22 +66,16 @@ function createD1Db({ accountId, apiToken, databaseId }) {
     backend: 'd1',
     prepare: wrapStmt,
     async exec(sql) {
-      // Multi-statement. D1 tidak mendukung PRAGMA transaksional; dipakai untuk schema.
-      const statements = String(sql)
-        .split(';')
-        .map((s) => s.trim())
-        .filter(Boolean);
-      if (!statements.length) return;
-      await post('/query', { sql: statements });
+      // Multi-statement didukung endpoint /query (dipisah ';' di sisi server).
+      await post('/query', { sql: String(sql) });
     },
     // Atomik: seluruh statement dijalankan dalam satu batch D1 (satu transaksi).
     async batch(items) {
-      const list = items.map((it) => (typeof it === 'string' ? { sql: it, params: [] } : it));
-      const sql = list.map((it) => it.sql);
-      const params = list.map((it) => it.params || []);
-      const json = await post('/query', { sql, params });
-      const results = rowsOf(json);
-      return results.map((result) => ({
+      const batch = (items || []).map((it) =>
+        typeof it === 'string' ? { sql: it, params: [] } : { sql: it.sql, params: it.params || [] }
+      );
+      const json = await post('/query', { batch });
+      return listOf(json).map((result) => ({
         changes: Number((result.meta && result.meta.changes) || 0),
         lastInsertRowid: Number((result.meta && result.meta.last_row_id) || 0),
       }));
