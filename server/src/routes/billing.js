@@ -1,10 +1,8 @@
 'use strict';
 const express = require('express');
-const storage = require('../storage');
 const { db, audit, nextNumber, todayISO, nowJakarta } = require('../db');
 const { requireAuth, requireRole, isTutor } = require('../middleware/auth');
 const { asyncHandler, badRequest, notFound } = require('../middleware/helpers');
-const { buildReceiptPDF, terbilang } = require('../pdf');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -129,7 +127,7 @@ router.get('/payments', requireRole('sekretaris', 'direktur'), asyncHandler(asyn
   if (to) { where.push('p.paid_at <= ?'); params.push(to); }
   if (status) { where.push('p.status = ?'); params.push(status); }
   const rows = await db.prepare(
-    `SELECT p.*, s.full_name AS student_name, s.nis, i.invoice_number, u.full_name AS recorder
+    `SELECT p.*, s.full_name AS student_name, s.nis, i.invoice_number, i.program, i.period, u.full_name AS recorder
      FROM payments p JOIN students s ON s.id = p.student_id
      LEFT JOIN invoices i ON i.id = p.invoice_id LEFT JOIN users u ON u.id = p.recorded_by
      ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY p.id DESC LIMIT 800`
@@ -179,29 +177,7 @@ router.post('/payments/:id/cancel', requireRole('direktur'), asyncHandler(async 
   res.json({ message: 'Pembayaran dibatalkan dan saldo tagihan dihitung ulang. Riwayat transaksi tetap tersimpan.' });
 }));
 
-router.get('/payments/:id/receipt', requireRole('sekretaris', 'direktur'), asyncHandler(async (req, res) => {
-  const id = Number(req.params.id);
-  const p = await db.prepare(
-    `SELECT p.*, s.full_name AS student_name, s.nis, i.invoice_number, i.program, i.period, u.full_name AS recorder
-     FROM payments p JOIN students s ON s.id = p.student_id
-     LEFT JOIN invoices i ON i.id = p.invoice_id LEFT JOIN users u ON u.id = p.recorded_by WHERE p.id = ?`
-  ).get(id);
-  if (!p) throw notFound('Pembayaran tidak ditemukan.');
-  const fileName = `kuitansi-${p.transaction_number}.pdf`;
-  const key = `receipts/${fileName}`;
-  if (!(await storage.exists(key))) {
-    await buildReceiptPDF({
-      transactionNumber: p.transaction_number, invoiceNumber: p.invoice_number || '-',
-      paidAt: p.paid_at, studentName: p.student_name, nis: p.nis, program: p.program,
-      period: p.period || '-', method: p.method, amount: p.amount, note: p.note,
-      recorder: p.recorder || '-', terbilang: terbilang(p.amount).replace(/^./, (c) => c.toUpperCase()) + ' rupiah',
-    }, key);
-  }
-  res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', `inline; filename="${fileName}"`);
-  const s = await storage.stream(key);
-  s.pipe(res);
-}));
+// Kuitansi PDF digenerate di sisi klien (client/src/export.js) — tanpa endpoint server.
 
 // ===== Ringkasan keuangan =====
 router.get('/summary', requireRole('sekretaris', 'direktur'), asyncHandler(async (req, res) => {

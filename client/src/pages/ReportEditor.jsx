@@ -4,6 +4,7 @@ import { useAuth } from '../auth';
 import { get, post, put } from '../api';
 import { PageHead, Spinner, Badge, Tabs, Field, Textarea, useToast, Modal } from '../ui';
 import { tgl } from '../format';
+import { exportRaporPdf } from '../export';
 
 const STATUS_FLOW = [
   { key: 'draf', label: 'Draf' },
@@ -24,6 +25,15 @@ export default function ReportEditor() {
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState(null);
   const [note, setNote] = useState('');
+  const [pdfBusy, setPdfBusy] = useState(false);
+
+  const downloadPdf = async () => {
+    setPdfBusy(true);
+    try {
+      await exportRaporPdf(data);
+      toast.success('PDF rapor berhasil diunduh.');
+    } catch (e) { toast.error(e.message); } finally { setPdfBusy(false); }
+  };
 
   const load = useCallback(() => {
     get(`/reports/${id}`).then((d) => {
@@ -103,7 +113,7 @@ export default function ReportEditor() {
         actions={<>
           <Link to="/rapor" className="btn-outline">← Daftar Rapor</Link>
           {['disetujui', 'diterbitkan'].includes(data.status) || (data.status !== 'diterbitkan' && user.role !== 'tentor')
-            ? <a className="btn-outline" href={`/api/reports/${id}/pdf`} target="_blank" rel="noreferrer">Lihat PDF</a>
+            ? <button className="btn-outline" disabled={pdfBusy} onClick={downloadPdf}>{pdfBusy ? 'Menyiapkan...' : 'Lihat PDF'}</button>
             : null}
         </>} />
 
@@ -293,15 +303,15 @@ export default function ReportEditor() {
               <button className="btn-primary" onClick={() => setConfirm({ kind: 'approve' })} disabled={busy}>Persetujuan Akhir Direktur</button>
             )}
             {['sekretaris', 'direktur'].includes(user.role) && data.status === 'disetujui' && (
-              <button className="btn-primary" onClick={() => setConfirm({ kind: 'publish' })} disabled={busy}>Terbitkan & Generate PDF</button>
+              <button className="btn-primary" onClick={() => setConfirm({ kind: 'publish' })} disabled={busy}>Terbitkan</button>
             )}
             {['disetujui', 'diterbitkan'].includes(data.status) && (
-              <a className="btn-outline" href={`/api/reports/${id}/pdf`} target="_blank" rel="noreferrer">Buka PDF</a>
+              <button className="btn-outline" disabled={pdfBusy} onClick={downloadPdf}>{pdfBusy ? 'Menyiapkan...' : 'Buka PDF'}</button>
             )}
           </div>
 
           <div className="mt-5 text-[11px] text-slate-500 bg-slate-50 rounded-lg p-3 leading-relaxed">
-            <b>Aturan alur:</b> tentor menyimpan draf & mengirim → sekretaris memeriksa kelengkapan administrasi → direktur memberi persetujuan → sekretaris menerbitkan PDF yang otomatis tersimpan di arsip siswa.
+            <b>Aturan alur:</b> tentor menyimpan draf & mengirim → sekretaris memeriksa kelengkapan administrasi → direktur memberi persetujuan → sekretaris menerbitkan rapor. PDF dapat diunduh kapan saja setelah disetujui/diterbitkan.
           </div>
         </div>
       )}
@@ -321,7 +331,7 @@ export default function ReportEditor() {
             <Textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="mis. Lengkapi catatan kesulitan siswa dan indikator konsentrasi" />
           </Field>
         ) : confirm?.kind === 'publish' ? (
-          <p className="text-sm text-slate-600">PDF rapor akan dibuat, status menjadi <b>Diterbitkan</b>, dan salinan otomatis masuk <b>Arsip Siswa</b>. Rapor terkunci setelah diterbitkan.</p>
+          <p className="text-sm text-slate-600">Status rapor menjadi <b>Diterbitkan</b>. PDF rapor dapat diunduh kapan saja. Rapor terkunci setelah diterbitkan.</p>
         ) : confirm?.kind === 'check' ? (
           <Field label="Catatan pemeriksa (opsional)"><Textarea value={note} onChange={(e) => setNote(e.target.value)} /></Field>
         ) : (

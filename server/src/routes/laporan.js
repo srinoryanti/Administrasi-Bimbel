@@ -1,11 +1,13 @@
 'use strict';
 const express = require('express');
-const ExcelJS = require('exceljs');
-const storage = require('../storage');
-const { db, audit, todayISO } = require('../db');
+const { db } = require('../db');
 const { requireAuth, requireRole } = require('../middleware/auth');
-const { asyncHandler, badRequest, notFound } = require('../middleware/helpers');
-const { buildTablePDF, rupiah, tgl } = require('../pdf');
+const { asyncHandler, notFound } = require('../middleware/helpers');
+
+function rupiah(n) {
+  const v = Number(n || 0);
+  return 'Rp ' + v.toLocaleString('id-ID', { maximumFractionDigits: 0 });
+}
 
 const router = express.Router();
 router.use(requireAuth, requireRole('sekretaris', 'direktur'));
@@ -168,62 +170,7 @@ router.get('/:type', asyncHandler(async (req, res) => {
   res.json({ data: rows, title: t.title });
 }));
 
-router.get('/:type/excel', asyncHandler(async (req, res) => {
-  const t = REPORT_TYPES[req.params.type];
-  if (!t) throw notFound('Jenis laporan tidak dikenal.');
-  const rows = await t.fn({ from: req.query.from || '', to: req.query.to || '' });
-  const wb = new ExcelJS.Workbook();
-  wb.creator = 'Sistem Informasi Bimbel Rumah Pintar';
-  const ws = wb.addWorksheet(t.title);
-  const headers = rows.length ? Object.keys(rows[0]) : ['Keterangan'];
-  const lastCol = Math.max(1, headers.length);
-  ws.mergeCells(1, 1, 1, lastCol);
-  ws.getCell('A1').value = `BIMBEL RUMAH PINTAR — ${t.title.toUpperCase()}`;
-  ws.getCell('A1').font = { bold: true, size: 14, color: { argb: 'FF1E3A5F' } };
-  ws.getCell('A2').value = `Periode: ${req.query.from || 'semua'} s.d. ${req.query.to || 'semua'} • Dibuat: ${todayISO()}`;
-  ws.getCell('A2').font = { size: 9, color: { argb: 'FF666666' } };
-  if (rows.length) {
-    ws.columns = headers.map((h) => ({ header: h, key: h, width: Math.max(14, Math.min(40, h.length + 8)) }));
-    const headRow = ws.getRow(4);
-    headers.forEach((h, i) => {
-      const c = headRow.getCell(i + 1);
-      c.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-      c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A5F' } };
-    });
-    headRow.commit();
-    rows.forEach((r) => ws.addRow(r));
-    // Format Rupiah untuk kolom nominal
-    headers.forEach((h, i) => {
-      if (/Total|Nominal|Sisa|Dibayar|Pemasukan/i.test(h)) {
-        ws.getColumn(i + 1).numFmt = '"Rp" #,##0';
-      }
-    });
-  } else {
-    ws.getCell('A4').value = 'Tidak ada data untuk periode/filter yang dipilih.';
-  }
-  const fileName = `laporan-${req.params.type}-${todayISO()}.xlsx`;
-  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-  res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-  await audit(req.user.id, req.user.fullName, 'EKSPOR_EXCEL', 'laporan', null, req.params.type, req.ip);
-  await wb.xlsx.write(res);
-  res.end();
-}));
-
-router.get('/:type/pdf', asyncHandler(async (req, res) => {
-  const t = REPORT_TYPES[req.params.type];
-  if (!t) throw notFound('Jenis laporan tidak dikenal.');
-  const rows = await t.fn({ from: req.query.from || '', to: req.query.to || '' });
-  const headers = rows.length ? Object.keys(rows[0]) : ['Keterangan'];
-  const cols = headers.map((h) => ({ label: h, key: h, width: 1 }));
-  const fileName = `laporan-${req.params.type}-${todayISO()}.pdf`;
-  const key = `exports/${fileName}`;
-  await buildTablePDF(t.title.toUpperCase(), `Periode: ${req.query.from || 'semua'} s.d. ${req.query.to || 'semua'} • Dibuat ${todayISO()}`,
-    cols, rows.length ? rows : [{ Keterangan: 'Tidak ada data untuk filter ini.' }], key);
-  await audit(req.user.id, req.user.fullName, 'EKSPOR_PDF', 'laporan', null, req.params.type, req.ip);
-  res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', `inline; filename="${fileName}"`);
-  const s = await storage.stream(key);
-  s.pipe(res);
-}));
+// Ekspor Excel & PDF dipindahkan ke sisi klien (client/src/export.js) —
+// Cloudflare Workers free plan tidak sanggup menjalankan ExcelJS/pdfkit (CPU 10 ms, bundle 3 MB).
 
 module.exports = router;

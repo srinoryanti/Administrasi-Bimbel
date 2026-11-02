@@ -1,11 +1,11 @@
 'use strict';
 const express = require('express');
 const path = require('path');
-const multer = require('multer');
 const storage = require('../storage');
 const { db, audit, nextNumber, todayISO } = require('../db');
 const { requireAuth, requireRole, isTutor } = require('../middleware/auth');
 const { asyncHandler, badRequest, notFound } = require('../middleware/helpers');
+const { multipart } = require('../middleware/multipart');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -14,15 +14,14 @@ router.use(requireAuth);
 const ALLOWED_EXT = new Set(['.pdf', '.png', '.jpg', '.jpeg', '.webp', '.doc', '.docx', '.xls', '.xlsx']);
 const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
 
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: { fileSize: MAX_SIZE },
-  fileFilter(req, file, cb) {
-    const ext = path.extname(file.originalname).toLowerCase();
-    if (!ALLOWED_EXT.has(ext)) return cb(new Error(`Tipe file tidak diizinkan: ${ext}. Yang diizinkan: ${[...ALLOWED_EXT].join(', ')}`));
-    cb(null, true);
-  },
-});
+const upload = multipart({ limit: MAX_SIZE });
+
+function checkFileExt(file) {
+  const ext = path.extname(file.originalname).toLowerCase();
+  if (!ALLOWED_EXT.has(ext)) {
+    throw badRequest(`Tipe file tidak diizinkan: ${ext}. Yang diizinkan: ${[...ALLOWED_EXT].join(', ')}`);
+  }
+}
 
 function archiveKey(file) {
   const ext = path.extname(file.originalname).toLowerCase();
@@ -106,14 +105,16 @@ router.get('/:id/download', asyncHandler(async (req, res) => {
   if (!(await storage.exists(row.file_path))) return res.status(404).json({ error: 'Berkas tidak ditemukan di penyimpanan.' });
   await audit(req.user.id, req.user.fullName, 'UNDUH_DOKUMEN', 'archives', id, row.doc_code, req.ip);
   const inline = req.query.inline === '1' && ['.pdf', '.png', '.jpg', '.jpeg', '.webp'].includes(path.extname(row.file_name).toLowerCase());
+  const buf = await storage.get(row.file_path);
   res.setHeader('Content-Type', row.file_type || 'application/octet-stream');
   res.setHeader('Content-Disposition', `${inline ? 'inline' : 'attachment'}; filename="${row.file_name}"`);
-  const s = await storage.stream(row.file_path);
-  s.pipe(res);
+  res.setHeader('Content-Length', buf.length);
+  res.end(buf);
 }));
 
-router.post('/', requireRole('sekretaris', 'direktur', 'tentor'), upload.single('file'), asyncHandler(async (req, res) => {
+router.post('/', requireRole('sekretaris', 'direktur', 'tentor'), upload, asyncHandler(async (req, res) => {
   if (!req.file) throw badRequest('Berkas wajib diunggah.');
+  checkFileExt(req.file);
   const b = req.body || {};
   if (!b.docName || !b.category) {
     throw badRequest('Nama dokumen dan kategori wajib diisi.');
@@ -142,11 +143,12 @@ router.post('/', requireRole('sekretaris', 'direktur', 'tentor'), upload.single(
 }));
 
 // Ganti dokumen → simpan versi lama
-router.post('/:id/replace', requireRole('sekretaris', 'direktur'), upload.single('file'), asyncHandler(async (req, res) => {
+router.post('/:id/replace', requireRole('sekretaris', 'direktur'), upload, asyncHandler(async (req, res) => {
   const id = Number(req.params.id);
   const row = await db.prepare('SELECT * FROM archives WHERE id = ?').get(id);
   if (!row) throw notFound('Dokumen tidak ditemukan.');
   if (!req.file) throw badRequest('Berkas pengganti wajib diunggah.');
+  checkFileExt(req.file);
   await db.prepare(
     `INSERT INTO archive_versions (archive_id, version, file_name, file_path, file_size, note, replaced_by)
      VALUES (?,?,?,?,?,?,?)`

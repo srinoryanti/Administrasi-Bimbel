@@ -1,10 +1,8 @@
 'use strict';
 const express = require('express');
-const storage = require('../storage');
-const { db, audit, nextNumber, getSetting, todayISO } = require('../db');
+const { db, audit, nextNumber, getSetting } = require('../db');
 const { requireAuth, requireRole, isTutor } = require('../middleware/auth');
 const { asyncHandler, badRequest, notFound } = require('../middleware/helpers');
-const { buildReportPDF } = require('../pdf');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -247,7 +245,7 @@ router.post('/:id/approve', requireRole('direktur'), asyncHandler(async (req, re
   res.json({ message: 'Rapor disetujui direktur dan siap diterbitkan.' });
 }));
 
-// Terbitkan + generate PDF + simpan salinan di arsip siswa
+// Terbitkan — PDF digenerate di sisi klien (Cloudflare Workers tidak sanggup render PDF server-side).
 router.post('/:id/publish', requireRole('sekretaris', 'direktur'), asyncHandler(async (req, res) => {
   const id = Number(req.params.id);
   const r = await db.prepare('SELECT * FROM student_reports WHERE id = ?').get(id);
@@ -256,49 +254,10 @@ router.post('/:id/publish', requireRole('sekretaris', 'direktur'), asyncHandler(
     throw badRequest('Rapor harus melalui pemeriksaan sekretaris dan persetujuan direktur sebelum diterbitkan.');
   }
   if (r.status === 'diterbitkan') throw badRequest('Rapor sudah diterbitkan.');
-  const payload = await reportPayload(id);
-  const fileName = `rapor-${payload.reportCode}-${payload.student.nis}.pdf`;
-  const pdfKey = `reports/${fileName}`;
-  await buildReportPDF(payload, pdfKey);
-  await db.prepare(`UPDATE student_reports SET status='diterbitkan', published_at=datetime('now','+7 hours'), pdf_path=?, updated_at=datetime('now','+7 hours') WHERE id=?`)
-    .run(pdfKey, id);
-  // Salinannya masuk arsip siswa otomatis — berkas yang sama disimpan dengan key arsip
-  // (archive/YYYY-MM) agar endpoint unduh arsip dapat menemukannya.
-  const ym = todayISO().slice(0, 7);
-  const arcFileName = `rapor-${payload.reportCode}-${payload.student.nis}.pdf`;
-  const arcKey = `archive/${ym}/${arcFileName}`;
-  const pdfBuf = await storage.get(pdfKey);
-  await storage.put(arcKey, pdfBuf, 'application/pdf');
-  const docCode = await nextNumber(db, 'ARS', 'archives', 'doc_code');
-  await db.prepare(
-    `INSERT INTO archives (doc_code, doc_name, category, description, doc_date, year, file_name, file_path, file_type, file_size, student_id, uploaded_by)
-     VALUES (?,?,?,?,?,?,?,?,'application/pdf',? ,?,?)`
-  ).run(docCode, `Rapor ${payload.period.name} - ${payload.student.fullName}`, 'Arsip rapor',
-    `Rapor perkembangan ${payload.reportCode} setelah diterbitkan`, todayISO(), Number(todayISO().slice(0, 4)),
-    arcFileName, arcKey, pdfBuf.length, payload.student.id, req.user.id);
-  await audit(req.user.id, req.user.fullName, 'TERBITKAN_RAPOR', 'student_reports', id, { pdf: fileName }, req.ip);
-  res.json({ message: 'Rapor diterbitkan. PDF tersimpan di arsip siswa.', pdfUrl: `/api/reports/${id}/pdf` });
-}));
-
-router.get('/:id/pdf', asyncHandler(async (req, res) => {
-  const id = Number(req.params.id);
-  const r = await db.prepare('SELECT * FROM student_reports WHERE id = ?').get(id);
-  if (!r) throw notFound('Rapor tidak ditemukan.');
-  if (isTutor(req.user) && r.tutor_id !== req.user.tutorId) throw badRequest('Bukan rapor tanggung jawab Anda.');
-  if (!r.pdf_path) {
-    if (!['disetujui', 'diterbitkan'].includes(r.status)) throw badRequest('PDF tersedia setelah rapor disetujui/diterbitkan.');
-    const payload = await reportPayload(id);
-    const fileName = `rapor-${payload.reportCode}-${payload.student.nis}.pdf`;
-    const pdfKey = `reports/${fileName}`;
-    await buildReportPDF(payload, pdfKey);
-    await db.prepare(`UPDATE student_reports SET pdf_path=? WHERE id=?`).run(pdfKey, id);
-    r.pdf_path = pdfKey;
-  }
-  if (!(await storage.exists(r.pdf_path))) throw notFound('Berkas PDF tidak ditemukan di penyimpanan.');
-  res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', `inline; filename="rapor-${r.report_code}.pdf"`);
-  const s = await storage.stream(r.pdf_path);
-  s.pipe(res);
+  await db.prepare(`UPDATE student_reports SET status='diterbitkan', published_at=datetime('now','+7 hours'), updated_at=datetime('now','+7 hours') WHERE id=?`)
+    .run(id);
+  await audit(req.user.id, req.user.fullName, 'TERBITKAN_RAPOR', 'student_reports', id, 'Rapor diterbitkan', req.ip);
+  res.json({ message: 'Rapor diterbitkan. PDF dapat diunduh melalui tombol PDF di daftar rapor.' });
 }));
 
 module.exports = router;

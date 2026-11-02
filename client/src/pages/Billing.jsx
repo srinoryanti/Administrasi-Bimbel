@@ -3,6 +3,7 @@ import { useAuth } from '../auth';
 import { get, post } from '../api';
 import { PageHead, Tabs, Table, Modal, Field, Input, Select, Textarea, Badge, useToast, Spinner } from '../ui';
 import { tgl, rupiah, today } from '../format';
+import { exportKuitansiPdf, terbilang } from '../export';
 
 const emptyInv = { studentId: '', program: '', period: '', invoiceDate: today(), dueDate: '', discount: 0, note: '', items: [{ description: '', qty: 1, price: 0 }] };
 const emptyPay = { invoiceId: '', amount: '', paidAt: today(), method: 'Tunai', note: '' };
@@ -22,6 +23,28 @@ export default function Billing() {
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState(null);
   const { user } = useAuth();
+  const [pdfBusy, setPdfBusy] = useState(0);
+
+  const downloadReceipt = async (r) => {
+    setPdfBusy(r.id);
+    try {
+      await exportKuitansiPdf({
+        transactionNumber: r.transaction_number,
+        invoiceNumber: r.invoice_number || '-',
+        paidAt: r.paid_at,
+        studentName: r.student_name,
+        nis: r.nis,
+        program: r.program,
+        period: r.period || '-',
+        method: r.method,
+        amount: r.amount,
+        note: r.note,
+        recorder: r.recorder || '-',
+        terbilang: terbilang(r.amount).replace(/^./, (c) => c.toUpperCase()) + ' rupiah',
+      });
+      toast.success('Kuitansi PDF berhasil diunduh.');
+    } catch (e) { toast.error(e.message); } finally { setPdfBusy(0); }
+  };
 
   const load = useCallback(() => {
     setLoading(true);
@@ -173,7 +196,9 @@ export default function Billing() {
               { label: 'Status', render: (r) => <Badge status={r.status === 'posted' ? 'aktif' : 'batal'} children={r.status === 'posted' ? 'Tercatat' : 'Dibatalkan'} /> },
               { label: 'Aksi', center: true, render: (r) => (
                 <div className="flex gap-1 justify-center">
-                  <a className="btn-outline btn-sm" href={`/api/billing/payments/${r.id}/receipt`} target="_blank" rel="noreferrer">Kuitansi</a>
+                  <button className="btn-outline btn-sm" disabled={pdfBusy === r.id} onClick={() => downloadReceipt(r)}>
+                    {pdfBusy === r.id ? '...' : 'Kuitansi'}
+                  </button>
                   {r.status === 'posted' && user.role === 'direktur' && (
                     <button className="btn-outline btn-sm !text-red-600" onClick={() => setConfirm({ ...r, reason: '' })}>Batal</button>
                   )}
@@ -278,7 +303,9 @@ export default function Billing() {
               columns={[{ label: 'No. Transaksi', render: (r) => <span className="font-mono text-xs">{r.transaction_number}</span> },
                 { label: 'Tanggal', render: (r) => tgl(r.paid_at) }, { label: 'Nominal', render: (r) => <b>{rupiah(r.amount)}</b> },
                 { label: 'Metode', key: 'method' }, { label: 'Petugas', key: 'recorder' },
-                { label: '', center: true, render: (r) => <a className="btn-outline btn-sm" href={`/api/billing/payments/${r.id}/receipt`} target="_blank" rel="noreferrer">Kuitansi</a> }]} />
+                { label: '', center: true, render: (r) => <button className="btn-outline btn-sm" disabled={pdfBusy === r.id}
+                  onClick={() => downloadReceipt({ ...r, student_name: detail.studentName, nis: detail.nis, invoice_number: detail.invoiceNumber, program: detail.program, period: detail.period })}>
+                  {pdfBusy === r.id ? '...' : 'Kuitansi'}</button> }]} />
           </div>
         )}
       </Modal>

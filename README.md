@@ -5,11 +5,11 @@ Aplikasi web full-stack untuk operasional bimbel: data siswa & tentor, kelas & j
 ## Teknologi
 
 - **Frontend**: React 18 + Vite + Tailwind CSS + React Router + Recharts (`client/`)
-- **Backend**: Express + JWT (httpOnly cookie) + bcryptjs + multer + pdfkit + exceljs + AWS SDK v3 (`server/`)
+- **Backend**: Express + JWT (httpOnly cookie) + bcryptjs + pdfkit (seed lokal) — berjalan di Cloudflare Workers via `cloudflare:node` (`server/`, `worker/`)
 - **Basis data**: **lokal** → SQLite file `server/data/bimbel.db` (bawaan `node:sqlite`, tanpa instalasi eksternal); **produksi** → **Cloudflare D1** via REST API. Pemilihan otomatis dari env `D1_*`
 - **Penyimpanan berkas**: **lokal** → `server/uploads/`; **produksi** → **Backblaze B2** (S3-compatible). Pemilihan otomatis dari env `B2_*`
 
-Kode memakai satu abstraksi yang sama untuk kedua backend: `server/src/drivers/{local,d1}.js` (API `prepare().run/get/all`, `exec`, `batch` — selalu `await`) dan `server/src/storage.js` (`put/get/exists/stream/remove`).
+Kode memakai satu abstraksi yang sama untuk kedua backend: `server/src/drivers/{local,d1}.js` (API `prepare().run/get/all`, `exec`, `batch` — selalu `await`) dan `server/src/storage.js` (`put/get/exists/remove` — B2 ditandatangani SigV4 via fetch, tanpa AWS SDK). Ekspor Excel/PDF dilakukan di sisi klien (`client/src/export.js`).
 
 ## Cara Menjalankan (Pengembangan)
 

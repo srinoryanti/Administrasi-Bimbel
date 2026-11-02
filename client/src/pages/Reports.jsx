@@ -4,6 +4,7 @@ import { useAuth } from '../auth';
 import { get, post } from '../api';
 import { PageHead, Table, Badge, Modal, Field, Select, Input, useToast, Spinner, Tabs } from '../ui';
 import { tgl } from '../format';
+import { exportRaporPdf } from '../export';
 
 const STATUS_LABEL = { draf: 'Draf', menunggu: 'Menunggu Pemeriksaan', revisi: 'Perlu Revisi', disetujui: 'Disetujui', diterbitkan: 'Diterbitkan' };
 
@@ -19,6 +20,16 @@ export default function Reports() {
   const [busy, setBusy] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
   const [note, setNote] = useState('');
+  const [pdfBusy, setPdfBusy] = useState(0);
+
+  const downloadPdf = async (r) => {
+    setPdfBusy(r.id);
+    try {
+      const d = await get(`/reports/${r.id}`);
+      await exportRaporPdf(d.data);
+      toast.success('PDF rapor berhasil diunduh.');
+    } catch (e) { toast.error(e.message); } finally { setPdfBusy(0); }
+  };
 
   const load = useCallback(() => {
     setLoading(true);
@@ -58,7 +69,7 @@ export default function Reports() {
       btns.push(<button key="appr" className="btn-primary btn-sm" onClick={() => setConfirmAction({ kind: 'approve', id: r.id, row: r })}>Persetujuan Akhir</button>);
     }
     if (['sekretaris', 'direktur'].includes(user.role) && r.status === 'disetujui') {
-      btns.push(<button key="pub" className="btn-primary btn-sm" onClick={() => setConfirmAction({ kind: 'publish', id: r.id, row: r })}>Terbitkan + PDF</button>);
+      btns.push(<button key="pub" className="btn-primary btn-sm" onClick={() => setConfirmAction({ kind: 'publish', id: r.id, row: r })}>Terbitkan</button>);
     }
     return btns;
   };
@@ -97,13 +108,15 @@ export default function Reports() {
                 <button className="btn-outline btn-sm" onClick={() => nav(`/rapor/${r.id}`)}>Buka</button>
                 {actionButtons(r)}
                 {['disetujui', 'diterbitkan'].includes(r.status) && (
-                  <a className="btn-outline btn-sm" href={`/api/reports/${r.id}/pdf`} target="_blank" rel="noreferrer">PDF</a>
+                  <button className="btn-outline btn-sm" disabled={pdfBusy === r.id} onClick={() => downloadPdf(r)}>
+                    {pdfBusy === r.id ? 'Menyiapkan...' : 'PDF'}
+                  </button>
                 )}
               </div>
             )},
           ]} />
         <p className="text-[11px] text-slate-400 mt-3">
-          Rapor yang sudah diterbitkan tidak dapat diubah tanpa proses revisi tercatat. PDF tersimpan otomatis di Arsip Siswa.
+          Rapor yang sudah diterbitkan tidak dapat diubah tanpa proses revisi tercatat. PDF dapat diunduh lewat tombol <b>PDF</b>.
         </p>
       </div>
 
@@ -135,7 +148,7 @@ export default function Reports() {
           )}
           {confirmAction?.kind === 'publish' && (
             <p className="text-xs bg-sky-50 border border-sky-200 rounded-lg p-3">
-              PDF rapor akan digenerate, status menjadi <b>Diterbitkan</b>, dan salinannya otomatis diarsipkan ke <b>Arsip Siswa</b>.
+              Status rapor menjadi <b>Diterbitkan</b>. PDF rapor dapat diunduh kapan saja lewat tombol <b>PDF</b>.
             </p>
           )}
           {confirmAction?.kind === 'submit' && (

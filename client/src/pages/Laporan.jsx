@@ -3,6 +3,7 @@ import { get } from '../api';
 import { useAuth } from '../auth';
 import { PageHead, Field, Input, Spinner, useToast, Badge } from '../ui';
 import { rupiah, today } from '../format';
+import { exportExcel, exportTablePdf } from '../export';
 
 const NEEDS_DATE = ['absensi_siswa', 'absensi_tentor', 'aktivitas_pembelajaran', 'tagihan', 'pembayaran'];
 
@@ -40,19 +41,16 @@ export default function Laporan() {
   const exportFile = async (kind) => {
     setBusy(kind);
     try {
-      const q = new URLSearchParams();
-      if (from) q.set('from', from);
-      if (to) q.set('to', to);
-      const res = await fetch(`/api/laporan/${type}/${kind}?${q}`, { credentials: 'include' });
-      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || 'Ekspor gagal.'); }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `laporan-${type}-${today()}.${kind === 'excel' ? 'xlsx' : 'pdf'}`;
-      document.body.appendChild(a); a.click(); a.remove();
-      URL.revokeObjectURL(url);
-      toast.success(`Laporan ${kind === 'excel' ? 'Excel' : 'PDF'} berhasil diunduh.`);
+      const t = types.find((x) => x.key === type);
+      const title = t ? t.title : type;
+      const subtitle = `Periode: ${from || 'semua'} s.d. ${to || 'semua'} • Dibuat: ${today()}`;
+      if (kind === 'excel') {
+        exportExcel(title, subtitle, data?.data || []);
+        toast.success('Laporan Excel berhasil diunduh.');
+      } else {
+        await exportTablePdf(type, title, subtitle, data?.data || []);
+        toast.success('Laporan PDF berhasil diunduh.');
+      }
     } catch (e) { toast.error(e.message); } finally { setBusy(''); }
   };
 
