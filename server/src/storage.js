@@ -96,6 +96,30 @@ async function b2Fetch(method, key, { body = null, contentType = null } = {}) {
 }
 // ---------------------------------------------------------------
 
+// Diagnostic singkat untuk error B2 (hanya panjang/prefix — bukan nilai rahasia).
+function b2Diag() {
+  const kid = String(process.env.B2_KEY_ID || '');
+  const k = String(process.env.B2_KEY || '');
+  return `[key_id_len=${kid.length} key_id_head=${kid.slice(0, 6)} key_id_tail=${kid.slice(-4)} ` +
+    `key_len=${k.length} region=${process.env.B2_REGION || '-'} bucket=${process.env.B2_BUCKET || '-'}]`;
+}
+
+// B2 bisa menjawab 403/500 sesaat tepat setelah upload (propagasi read-after-write)
+// atau saat insiden ringan — baca di-retry singkat agar unduhan langsung tetap jalan.
+async function b2FetchRetry(method, key, opts) {
+  const isRead = method === 'GET' || method === 'HEAD';
+  let res;
+  for (let i = 0; i < 3; i++) {
+    res = await b2Fetch(method, key, opts);
+    const transient =
+      res.status === 500 || res.status === 502 || res.status === 503 ||
+      (isRead && res.status === 403);
+    if (!transient || i === 2) return res;
+    await new Promise((r) => setTimeout(r, 400 * (i + 1)));
+  }
+  return res;
+}
+
 function localPathFor(key) {
   const safe = key.replace(/[^A-Za-z0-9/._-]/g, '_');
   return path.join(UPLOADS_DIR, safe);
@@ -117,8 +141,8 @@ function ensureBackend() {
 async function put(key, buffer, contentType = 'application/octet-stream') {
   ensureBackend();
   if (useB2) {
-    const res = await b2Fetch('PUT', key, { body: buffer, contentType });
-    if (!res.ok) throw new Error(`Gagal unggah "${key}" ke B2: HTTP ${res.status} ${await res.text()}`);
+    const res = await b2FetchRetry('PUT', key, { body: buffer, contentType });
+    if (!res.ok) throw new Error(`Gagal unggah "${key}" ke B2: HTTP ${res.status} ${await res.text()} ${b2Diag()}`);
     return key;
   }
   const full = localPathFor(key);
@@ -130,10 +154,10 @@ async function put(key, buffer, contentType = 'application/octet-stream') {
 async function exists(key) {
   ensureBackend();
   if (useB2) {
-    const res = await b2Fetch('HEAD', key);
+    const res = await b2FetchRetry('HEAD', key);
     if (res.status === 200) return true;
     if (res.status === 404) return false;
-    throw new Error(`Gagal memeriksa "${key}" di B2: HTTP ${res.status}`);
+    throw new Error(`Gagal memeriksa "${key}" di B2: HTTP ${res.status} ${b2Diag()}`);
   }
   return fs.existsSync(localPathFor(key));
 }
@@ -141,8 +165,8 @@ async function exists(key) {
 async function get(key) {
   ensureBackend();
   if (useB2) {
-    const res = await b2Fetch('GET', key);
-    if (!res.ok) throw new Error(`Gagal mengunduh "${key}" dari B2: HTTP ${res.status}`);
+    const res = await b2FetchRetry('GET', key);
+    if (!res.ok) throw new Error(`Gagal mengunduh "${key}" dari B2: HTTP ${res.status} ${b2Diag()}`);
     const ab = await res.arrayBuffer();
     return typeof Buffer !== 'undefined' ? Buffer.from(ab) : new Uint8Array(ab);
   }
@@ -152,7 +176,7 @@ async function get(key) {
 async function remove(key) {
   ensureBackend();
   if (useB2) {
-    const res = await b2Fetch('DELETE', key);
+    const res = await b2FetchRetry('DELETE', key);
     if (!res.ok && res.status !== 404) throw new Error(`Gagal menghapus "${key}" di B2: HTTP ${res.status}`);
     return;
   }
