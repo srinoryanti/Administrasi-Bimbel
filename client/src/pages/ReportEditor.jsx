@@ -227,7 +227,7 @@ export default function ReportEditor() {
           <h4 className="font-bold text-navy mb-3">3. Rekap Kehadiran Periode {data.period.name}</h4>
           <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
             {[['Pertemuan Dijadwalkan', data.attendance.scheduled, 'text-navy'],
-              ['Hadir', data.attendance.hadir, 'text-emerald-600'], ['Izin', data.attendance.izin, 'text-sky-600'],
+              ['Hadir', data.attendance.hadir, 'text-emerald-600'], ['Izin', data.attendance.izin, 'text-indigo-600'],
               ['Sakit', data.attendance.sakit, 'text-amber-600'], ['Alpa', data.attendance.alpa, 'text-red-600'],
               ['Persentase', `${data.attendance.percentage}%`, 'text-navy']].map(([l, v, c]) => (
               <div key={l} className="bg-slate-50 rounded-lg p-3 text-center">

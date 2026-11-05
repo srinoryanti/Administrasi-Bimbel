@@ -151,7 +151,7 @@ export default function Attendance() {
                           records[s.id]?.status === st.v
                             ? st.v === 'hadir' ? 'bg-emerald-600 border-emerald-600 text-white'
                               : st.v === 'alpa' ? 'bg-red-600 border-red-600 text-white'
-                              : 'bg-sky-500 border-sky-500 text-white'
+                              : 'bg-indigo-500 border-indigo-500 text-white'
                             : 'bg-white border-slate-300 text-slate-500 hover:border-navy'}`}>
                         {st.l}
                       </button>

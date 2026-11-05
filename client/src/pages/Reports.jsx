@@ -147,7 +147,7 @@ export default function Reports() {
             <Field label="Catatan Pemeriksaan (opsional)"><input className="input" value={note} onChange={(e) => setNote(e.target.value)} /></Field>
           )}
           {confirmAction?.kind === 'publish' && (
-            <p className="text-xs bg-sky-50 border border-sky-200 rounded-lg p-3">
+            <p className="text-xs bg-indigo-50 border border-indigo-200 rounded-lg p-3">
               Status rapor menjadi <b>Diterbitkan</b>. PDF rapor dapat diunduh kapan saja lewat tombol <b>PDF</b>.
             </p>
           )}

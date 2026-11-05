@@ -249,7 +249,7 @@ export default function Schedules() {
                 <Field label="Jam Selesai"><Input type="time" value={clsForm.data.schedule?.endTime || ''}
                   onChange={(e) => setClsForm((f) => ({ ...f, data: { ...f.data, schedule: { ...f.data.schedule, endTime: e.target.value, endTimeManual: true } } }))} />
                   {programs.find((p) => String(p.id) === String(clsForm.data.programId)) && !clsForm.data.schedule?.endTimeManual &&
-                    <span className="text-[10px] text-sky-600">otomatis: {programs.find((p) => String(p.id) === String(clsForm.data.programId)).duration_minutes} menit</span>}</Field>
+                    <span className="text-[10px] text-indigo-600">otomatis: {programs.find((p) => String(p.id) === String(clsForm.data.programId)).duration_minutes} menit</span>}</Field>
                 <Field label="Status"><Select value={clsForm.data.status} onChange={(e) => setCls('status', e.target.value)}>
                   <option value="aktif">Aktif</option><option value="selesai">Selesai</option><option value="nonaktif">Nonaktif</option></Select></Field>
               </div>
@@ -276,7 +276,7 @@ export default function Schedules() {
                 {HARI.map((h, i) => <option key={h} value={i}>{h}</option>)}</Select></Field>
               <Field label="Jam Mulai" required><Input type="time" value={schedForm.data.startTime} onChange={(e) => schedChange({ startTime: e.target.value })} /></Field>
               <Field label="Jam Selesai" required><Input type="time" value={schedForm.data.endTime || ''} onChange={(e) => schedChange({ endTime: e.target.value })} />
-                {!schedForm.data.endTimeManual && progDurOf(schedForm.data.classId) && <span className="text-[10px] text-sky-600">otomatis: {progDurOf(schedForm.data.classId)} mnt</span>}</Field>
+                {!schedForm.data.endTimeManual && progDurOf(schedForm.data.classId) && <span className="text-[10px] text-indigo-600">otomatis: {progDurOf(schedForm.data.classId)} mnt</span>}</Field>
             </div>
             <Field label="Lokasi"><Input value={schedForm.data.location || ''} onChange={(e) => setSched('location', e.target.value)} /></Field>
             {conflict.length > 0 && (

@@ -69,14 +69,14 @@ export default function Layout({ title, children }) {
           </div>
           <div className="min-w-0">
             <div className="font-bold leading-tight text-sm">BIMBEL RUMAH PINTAR</div>
-            <div className="text-[11px] text-sky-200 truncate">Sistem Informasi Manajemen</div>
+            <div className="text-[11px] text-indigo-200 truncate">Sistem Informasi Manajemen</div>
           </div>
           <button className="ml-auto lg:hidden text-2xl" onClick={() => setOpen(false)}>&times;</button>
         </div>
         <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-4">
           {groups.map((g) => (
             <div key={g.group}>
-              <div className="px-3 mb-1 text-[10px] font-bold uppercase tracking-wider text-sky-300/70">{g.group}</div>
+              <div className="px-3 mb-1 text-[10px] font-bold uppercase tracking-wider text-indigo-300/70">{g.group}</div>
               {g.items.map((i) => (
                 <NavLink key={i.to} to={i.to} end={i.to === '/'}
                   onClick={() => setOpen(false)}
@@ -89,7 +89,7 @@ export default function Layout({ title, children }) {
             </div>
           ))}
         </nav>
-        <div className="p-3 border-t border-white/10 text-[11px] text-sky-200/80">
+        <div className="p-3 border-t border-white/10 text-[11px] text-indigo-200/80">
           Asia/Jakarta • v1.0
         </div>
       </aside>
@@ -115,7 +115,7 @@ export default function Layout({ title, children }) {
                   <div className="px-4 py-2 border-b border-slate-100">
                     <div className="text-sm font-semibold text-navy">{user?.fullName}</div>
                     <div className="text-[11px] text-slate-500">{user?.email || user?.username}</div>
-                    <div className="text-[11px] text-sky-600 font-semibold mt-0.5">{user?.roleName}</div>
+                    <div className="text-[11px] text-indigo-600 font-semibold mt-0.5">{user?.roleName}</div>
                   </div>
                   <button className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50" onClick={() => { setMenu(false); setPwModal(true); }}>Ganti Password</button>
                   <button className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50" onClick={() => { setMenu(false); doLogout(); }}>Keluar (Logout)</button>

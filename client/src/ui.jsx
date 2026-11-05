@@ -24,7 +24,7 @@ export function ToastProvider({ children }) {
             className={`rounded-lg px-4 py-3 text-sm font-medium shadow-lg border flex items-start gap-2 animate-[fadeIn_.2s_ease] ${
               t.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
               : t.type === 'error' ? 'bg-red-50 border-red-200 text-red-800'
-              : 'bg-sky-50 border-sky-200 text-sky-800'}`}>
+              : 'bg-indigo-50 border-indigo-200 text-indigo-800'}`}>
             <span className="mt-0.5">{t.type === 'success' ? '✓' : t.type === 'error' ? '✕' : 'ℹ'}</span>
             <span>{t.msg}</span>
           </div>
@@ -68,7 +68,7 @@ export function Confirm({ open, onClose, onConfirm, title, message, loading }) {
 /* ---------- Kartu statistik ---------- */
 export function StatCard({ label, value, sub, icon, tone = 'navy' }) {
   const tones = {
-    navy: 'bg-navy text-white', blue: 'bg-sky-500 text-white', green: 'bg-emerald-500 text-white',
+    navy: 'bg-navy text-white', blue: 'bg-indigo-500 text-white', green: 'bg-emerald-500 text-white',
     amber: 'bg-amber-500 text-white', red: 'bg-red-500 text-white', white: 'bg-white text-navy border border-slate-200',
   };
   return (
@@ -121,7 +121,7 @@ export function Table({ columns, rows, empty = 'Belum ada data.', loading, onRow
         <tbody>
           {rows.map((r, ri) => (
             <tr key={r.id ?? ri}
-              className={`${onRowClick ? 'cursor-pointer hover:bg-sky-50/60' : 'odd:bg-white even:bg-slate-50/60'} transition-colors`}
+              className={`${onRowClick ? 'cursor-pointer hover:bg-indigo-50/60' : 'odd:bg-white even:bg-slate-50/60'} transition-colors`}
               onClick={() => onRowClick && onRowClick(r)}>
               {columns.map((c, ci) => (
                 <td key={ci} className={`td ${c.center ? 'text-center' : ''} ${c.className || ''}`}>

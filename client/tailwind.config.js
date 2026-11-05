@@ -5,12 +5,12 @@ export default {
     extend: {
       colors: {
         navy: {
-          DEFAULT: '#1e3a5f',
-          dark: '#14263d',
-          deeper: '#0d1b2e',
-          soft: '#3b6291',
+          DEFAULT: '#2916ad',
+          dark: '#21128a',
+          deeper: '#170c63',
+          soft: '#5b4bd6',
         },
-        mist: '#eef3f9',
+        mist: '#f0eef9',
         accent: {
           green: '#0f9d58',
           amber: '#d97706',
@@ -19,7 +19,7 @@ export default {
         },
       },
       boxShadow: {
-        card: '0 1px 3px rgba(16, 34, 60, 0.08), 0 4px 14px rgba(16, 34, 60, 0.06)',
+        card: '0 1px 3px rgba(23, 12, 99, 0.08), 0 4px 14px rgba(23, 12, 99, 0.06)',
       },
     },
   },

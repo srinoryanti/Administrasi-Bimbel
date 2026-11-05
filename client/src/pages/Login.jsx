@@ -36,29 +36,29 @@ export default function Login() {
     <div className="min-h-screen grid lg:grid-cols-2">
       {/* Identitas visual */}
       <div className="bg-navy text-white flex flex-col justify-between p-8 sm:p-12 relative overflow-hidden">
-        <div className="absolute -right-20 -top-20 w-72 h-72 rounded-full bg-sky-500/20" />
-        <div className="absolute -left-16 bottom-10 w-56 h-56 rounded-full bg-sky-400/10" />
+        <div className="absolute -right-20 -top-20 w-72 h-72 rounded-full bg-indigo-300/25" />
+        <div className="absolute -left-16 bottom-10 w-56 h-56 rounded-full bg-indigo-400/15" />
         <div className="relative">
           <div className="w-16 h-16 rounded-2xl bg-white flex items-center justify-center p-2 mb-6 shadow-lg">
             <img src="/logo.svg" alt="Logo Bimbel Rumah Pintar" className="w-full h-full" />
           </div>
           <h1 className="text-2xl sm:text-3xl font-black leading-tight">BIMBEL RUMAH PINTAR</h1>
-          <p className="text-sky-200 mt-2 text-sm">Sistem Informasi Manajemen Bimbel</p>
+          <p className="text-indigo-200 mt-2 text-sm">Sistem Informasi Manajemen Bimbel</p>
         </div>
         <div className="relative hidden sm:block">
-          <p className="text-lg font-semibold leading-relaxed text-sky-100">
+          <p className="text-lg font-semibold leading-relaxed text-indigo-100">
             Kelola siswa, tentor, kelas, absensi, rapor perkembangan, arsip digital, dan pembayaran dalam satu sistem yang terintegrasi.
           </p>
           <div className="mt-6 grid grid-cols-3 gap-3 text-center text-xs">
             {[['Data', 'Tersentralisasi'], ['Hak Akses', 'Berbasis Peran'], ['Laporan', 'PDF & Excel']].map(([a, b]) => (
               <div key={a} className="bg-white/10 rounded-xl py-3">
                 <div className="font-bold">{a}</div>
-                <div className="text-sky-200">{b}</div>
+                <div className="text-indigo-200">{b}</div>
               </div>
             ))}
           </div>
         </div>
-        <div className="relative text-[11px] text-sky-300/80">© 2026 Bimbel Rumah Pintar • Asia/Jakarta</div>
+        <div className="relative text-[11px] text-indigo-300/80">© 2026 Bimbel Rumah Pintar • Asia/Jakarta</div>
       </div>
 
       {/* Form */}

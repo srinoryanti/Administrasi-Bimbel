@@ -6,7 +6,7 @@ import { get } from '../api';
 import { Spinner, StatCard, Badge, PageHead, useToast } from '../ui';
 import { tgl, rupiah, HARI } from '../format';
 
-const COLORS = ['#1e3a5f', '#3b6291', '#7da7d9', '#d97706', '#0f9d58'];
+const COLORS = ['#2916ad', '#5b4bd6', '#9b8ff0', '#d97706', '#0f9d58'];
 
 function monthLabel(m) {
   if (!m) return '';
@@ -65,7 +65,7 @@ function DashboardDirektur({ data: d }) {
               <XAxis dataKey="label" fontSize={11} />
               <YAxis allowDecimals={false} fontSize={11} />
               <Tooltip />
-              <Bar dataKey="n" name="Siswa" fill="#1e3a5f" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="n" name="Siswa" fill="#2916ad" radius={[6, 6, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -142,7 +142,7 @@ function DashboardDirektur({ data: d }) {
             <XAxis dataKey="full_name" fontSize={10} tickFormatter={(v) => String(v).split(' ')[0]} />
             <YAxis domain={[0, 100]} fontSize={11} />
             <Tooltip />
-            <Bar dataKey="avg_score" name="Rata-rata" fill="#3b6291" radius={[6, 6, 0, 0]} />
+            <Bar dataKey="avg_score" name="Rata-rata" fill="#5b4bd6" radius={[6, 6, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
