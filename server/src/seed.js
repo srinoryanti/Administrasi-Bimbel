@@ -114,19 +114,23 @@ async function main() {
   // ========== MATA PELAJARAN ==========
   const subjects = [
     ['MTK', 'Matematika'], ['BIN', 'Bahasa Indonesia'], ['BIG', 'Bahasa Inggris'],
-    ['IPA', 'IPA Terpadu'], ['IPS', 'IPS Terpadu'], ['PAI', 'Pendidikan Agama Islam'],
-    ['PKN', 'Pendidikan Kewarganegaraan'],
+    ['IPA', 'IPAS'], ['IPS', 'IPS Terpadu'], ['PAI', 'Pendidikan Agama Islam'],
+    ['PKN', 'Pendidikan Kewarganegaraan'], ['PANC', 'Pendidikan Pancasila'],
+    ['SBDP', 'SBdP'], ['BJWA', 'Bahasa Jawa'],
     ['MBC', 'Membaca'], ['MNL', 'Menulis'], ['BHR', 'Berhitung'],
   ];
   const subjectIds = {};
   const insSubj = db.prepare('INSERT INTO subjects (code, name) VALUES (?,?)');
   for (const [c, n] of subjects) subjectIds[n] = Number((await insSubj.run(c, n)).lastInsertRowid);
 
-  // ========== PROGRAM BIMBEL ==========
+  // ========== PROGRAM BIMBEL (sesuai brosur) ==========
+  const SD_SUBJ = 'Matematika, Pendidikan Pancasila, B. Indonesia, SBdP, B. Jawa, dan IPAS.';
   const programDefs = [
-    { code: 'CLS', name: 'Calistung', target: 'TK/RA', dur: 90, sesi: 12, price: 350000, desc: 'Baca, tulis, hitung — jenjang TK/RA. 90 menit, 12 pertemuan/bulan.' },
-    { code: 'RGA', name: 'Reguler A', target: 'SD/MI', dur: 90, sesi: 12, price: 400000, desc: 'Program reguler jenjang SD/MI. 90 menit, 12 pertemuan/bulan.' },
-    { code: 'RGB', name: 'Reguler B', target: null, dur: 60, sesi: 24, price: 500000, desc: 'Program intensif 60 menit, 24 pertemuan/bulan.' },
+    { code: 'CLS', name: 'Calistung', target: 'TK/RA', dur: 60, sesi: 12, price: 100000, desc: 'Membaca, Menulis, dan Berhitung. 12x pertemuan/bulan, 60 menit/pertemuan.' },
+    { code: 'RGA', name: 'SD/MI Reguler A', target: 'SD/MI', dur: 90, sesi: 12, price: 120000, desc: `12x pertemuan/bulan, 90 menit/pertemuan. ${SD_SUBJ}` },
+    { code: 'RGB', name: 'SD/MI Reguler B', target: 'SD/MI', dur: 60, sesi: 24, price: 150000, desc: `24x pertemuan/bulan, 60 menit/pertemuan. ${SD_SUBJ}` },
+    { code: 'SPV', name: 'SD/MI Semi Privat', target: 'SD/MI', dur: 90, sesi: 12, price: 180000, desc: `12x pertemuan/bulan, 90 menit/pertemuan. ${SD_SUBJ}` },
+    { code: 'PVT', name: 'SD/MI Privat', target: 'SD/MI', dur: 60, sesi: 12, price: 250000, desc: `12x pertemuan/bulan, 60 menit/pertemuan. ${SD_SUBJ}` },
   ];
   const programIds = {};
   const insProg = db.prepare(
@@ -136,12 +140,13 @@ async function main() {
   const progByName = Object.fromEntries(programDefs.map((p) => [p.name, p]));
 
   // ========== MAPEL PER PROGRAM ==========
-  // Calistung: Membaca, Menulis, Berhitung — Reguler A/B: mapel inti
+  // Calistung: Membaca, Menulis, Berhitung — program SD/MI: 6 mapel sesuai brosur
   const insPS = db.prepare('INSERT OR IGNORE INTO program_subjects (program_id, subject_id) VALUES (?,?)');
-  const coreSubjects = ['Matematika', 'Bahasa Indonesia', 'Bahasa Inggris', 'IPA Terpadu', 'IPS Terpadu', 'Pendidikan Agama Islam', 'Pendidikan Kewarganegaraan'];
-  for (const n of coreSubjects) {
-    await insPS.run(programIds['Reguler A'], subjectIds[n]);
-    await insPS.run(programIds['Reguler B'], subjectIds[n]);
+  const sdSubjects = ['Matematika', 'Pendidikan Pancasila', 'Bahasa Indonesia', 'SBdP', 'Bahasa Jawa', 'IPAS'];
+  for (const n of sdSubjects) {
+    for (const pname of ['SD/MI Reguler A', 'SD/MI Reguler B', 'SD/MI Semi Privat', 'SD/MI Privat']) {
+      await insPS.run(programIds[pname], subjectIds[n]);
+    }
   }
   for (const n of ['Membaca', 'Menulis', 'Berhitung']) await insPS.run(programIds['Calistung'], subjectIds[n]);
 
@@ -171,16 +176,16 @@ async function main() {
 
   // ========== SISWA (demo) ==========
   const studentDefs = [
-    { name: 'Muhammad Rafa Ardiansyah', gp: 'L', bp: 'Jakarta', bd: '2015-03-12', level: 'SD', grade: 'Kelas 4', school: 'SDN Menteng 01', wali: 'Budi Ardiansyah', hub: 'Ayah', wa: '08111000001', prog: 'Reguler A' },
-    { name: 'Nadia Putri Anggraini', gp: 'P', bp: 'Depok', bd: '2014-08-25', level: 'SD', grade: 'Kelas 5', school: 'SDN Sukamaju 03', wali: 'Sri Handayani', hub: 'Ibu', wa: '08111000002', prog: 'Reguler A' },
-    { name: 'Bagas Dwi Saputra', gp: 'L', bp: 'Bekasi', bd: '2013-01-05', level: 'SD', grade: 'Kelas 6', school: 'SD Harapan Bangsa', wali: 'Agus Saputra', hub: 'Ayah', wa: '08111000003', prog: 'Reguler A' },
-    { name: 'Salsabila Aulia Rahma', gp: 'P', bp: 'Jakarta', bd: '2012-11-17', level: 'SMP', grade: 'Kelas 7', school: 'SMPN 24 Jakarta', wali: 'Hj. Ratna Wulandari', hub: 'Ibu', wa: '08111000004', prog: 'Reguler B' },
-    { name: 'Fajar Nugroho', gp: 'L', bp: 'Tangerang', bd: '2011-06-30', level: 'SMP', grade: 'Kelas 8', school: 'SMP Cendekia', wali: 'Drs. Hendro Nugroho', hub: 'Ayah', wa: '08111000005', prog: 'Reguler B' },
-    { name: 'Aisyah Kamila', gp: 'P', bp: 'Jakarta', bd: '2010-09-08', level: 'SMP', grade: 'Kelas 9', school: 'SMPIT Al-Falah', wali: 'Ust. Hasan Basri', hub: 'Ayah', wa: '08111000006', prog: 'Reguler B' },
-    { name: 'Kevin Jonathan Simatupang', gp: 'L', bp: 'Bogor', bd: '2009-04-21', level: 'SMA', grade: 'Kelas 10', school: 'SMA Negeri 6 Bogor', wali: 'Maria Simatupang', hub: 'Ibu', wa: '08111000007', prog: 'Reguler B' },
-    { name: 'Anindya Sari Wijaya', gp: 'P', bp: 'Jakarta', bd: '2008-12-02', level: 'SMA', grade: 'Kelas 11', school: 'SMA Persada', wali: 'Wijaya Kusuma', hub: 'Ayah', wa: '08111000008', prog: 'Reguler B' },
-    { name: 'Rafi Ahmad Maulana', gp: 'L', bp: 'Depok', bd: '2007-07-19', level: 'SMA', grade: 'Kelas 12', school: 'SMA Negeri 1 Depok', wali: 'Dedi Maulana', hub: 'Ayah', wa: '08111000009', prog: 'Reguler B' },
-    { name: 'Kirana Maharani', gp: 'P', bp: 'Jakarta', bd: '2016-02-14', level: 'SD', grade: 'Kelas 3', school: 'SD Kebon Jeruk 02', wali: 'Rina Maharani', hub: 'Ibu', wa: '08111000010', prog: 'Reguler A' },
+    { name: 'Muhammad Rafa Ardiansyah', gp: 'L', bp: 'Jakarta', bd: '2015-03-12', level: 'SD', grade: 'Kelas 4', school: 'SDN Menteng 01', wali: 'Budi Ardiansyah', hub: 'Ayah', wa: '08111000001', prog: 'SD/MI Reguler A' },
+    { name: 'Nadia Putri Anggraini', gp: 'P', bp: 'Depok', bd: '2014-08-25', level: 'SD', grade: 'Kelas 5', school: 'SDN Sukamaju 03', wali: 'Sri Handayani', hub: 'Ibu', wa: '08111000002', prog: 'SD/MI Reguler A' },
+    { name: 'Bagas Dwi Saputra', gp: 'L', bp: 'Bekasi', bd: '2013-01-05', level: 'SD', grade: 'Kelas 6', school: 'SD Harapan Bangsa', wali: 'Agus Saputra', hub: 'Ayah', wa: '08111000003', prog: 'SD/MI Reguler A' },
+    { name: 'Salsabila Aulia Rahma', gp: 'P', bp: 'Jakarta', bd: '2012-11-17', level: 'SMP', grade: 'Kelas 7', school: 'SMPN 24 Jakarta', wali: 'Hj. Ratna Wulandari', hub: 'Ibu', wa: '08111000004', prog: 'SD/MI Reguler B' },
+    { name: 'Fajar Nugroho', gp: 'L', bp: 'Tangerang', bd: '2011-06-30', level: 'SMP', grade: 'Kelas 8', school: 'SMP Cendekia', wali: 'Drs. Hendro Nugroho', hub: 'Ayah', wa: '08111000005', prog: 'SD/MI Reguler B' },
+    { name: 'Aisyah Kamila', gp: 'P', bp: 'Jakarta', bd: '2010-09-08', level: 'SMP', grade: 'Kelas 9', school: 'SMPIT Al-Falah', wali: 'Ust. Hasan Basri', hub: 'Ayah', wa: '08111000006', prog: 'SD/MI Reguler B' },
+    { name: 'Kevin Jonathan Simatupang', gp: 'L', bp: 'Bogor', bd: '2009-04-21', level: 'SMA', grade: 'Kelas 10', school: 'SMA Negeri 6 Bogor', wali: 'Maria Simatupang', hub: 'Ibu', wa: '08111000007', prog: 'SD/MI Reguler B' },
+    { name: 'Anindya Sari Wijaya', gp: 'P', bp: 'Jakarta', bd: '2008-12-02', level: 'SMA', grade: 'Kelas 11', school: 'SMA Persada', wali: 'Wijaya Kusuma', hub: 'Ayah', wa: '08111000008', prog: 'SD/MI Reguler B' },
+    { name: 'Rafi Ahmad Maulana', gp: 'L', bp: 'Depok', bd: '2007-07-19', level: 'SMA', grade: 'Kelas 12', school: 'SMA Negeri 1 Depok', wali: 'Dedi Maulana', hub: 'Ayah', wa: '08111000009', prog: 'SD/MI Reguler B' },
+    { name: 'Kirana Maharani', gp: 'P', bp: 'Jakarta', bd: '2016-02-14', level: 'SD', grade: 'Kelas 3', school: 'SD Kebon Jeruk 02', wali: 'Rina Maharani', hub: 'Ibu', wa: '08111000010', prog: 'SD/MI Reguler A' },
     { name: 'Kayla Putri Ramadhani', gp: 'P', bp: 'Jakarta', bd: '2020-05-09', level: 'TK', grade: 'TK B', school: 'RA Al-Hikmah', wali: 'Fauzan Ramadhani', hub: 'Ayah', wa: '08111000011', prog: 'Calistung' },
   ];
   const insStudent = db.prepare(
@@ -202,15 +207,15 @@ async function main() {
   // ========== KELAS (berbasis program; mapel opsional untuk penilaian jenjang SD ke atas) ==========
   const classDefs = [
     { name: 'Calistung TK/RA – Angkatan 1', level: 'TK', prog: 'Calistung', subj: null, type: 'kelompok', tutor: tutorB, loc: 'Ruang TK', days: [1, 3, 5], start: '08:00', students: [10] },
-    { name: 'Reguler A – SD Kelas 4', level: 'SD', prog: 'Reguler A', subj: 'Matematika', type: 'kelompok', tutor: tutorA, loc: 'Ruang 1', days: [1], start: '15:30', students: [0, 9] },
-    { name: 'Reguler A – SD Kelas 5', level: 'SD', prog: 'Reguler A', subj: 'IPA Terpadu', type: 'kelompok', tutor: tutorA, loc: 'Ruang 2', days: [3], start: '15:30', students: [1] },
-    { name: 'Reguler A – SD Kelas 6', level: 'SD', prog: 'Reguler A', subj: 'Matematika', type: 'kelompok', tutor: tutorA, loc: 'Ruang 1', days: [5], start: '16:00', students: [2] },
-    { name: 'Reguler B – SMP Kelas 7', level: 'SMP', prog: 'Reguler B', subj: 'Matematika', type: 'kelompok', tutor: tutorA, loc: 'Ruang 3', days: [2, 4], start: '17:00', students: [3] },
-    { name: 'Reguler B – SMP Kelas 8', level: 'SMP', prog: 'Reguler B', subj: 'Bahasa Inggris', type: 'kelompok', tutor: tutorB, loc: 'Ruang 2', days: [2], start: '17:00', students: [4] },
-    { name: 'Reguler B – SMP Kelas 9', level: 'SMP', prog: 'Reguler B', subj: 'Bahasa Indonesia', type: 'kelompok', tutor: tutorB, loc: 'Ruang 3', days: [4], start: '17:00', students: [5] },
-    { name: 'Reguler B – SMA Kelas 10', level: 'SMA', prog: 'Reguler B', subj: 'Matematika', type: 'kelompok', tutor: tutorA, loc: 'Ruang 4', days: [6], start: '09:00', students: [6] },
-    { name: 'Privat – Anindya (Reguler B)', level: 'SMA', prog: 'Reguler B', subj: 'Matematika', type: 'privat', tutor: tutorA, loc: 'Ruang Privat', days: [4], start: '19:00', students: [7] },
-    { name: 'Privat – Rafi (Reguler B)', level: 'SMA', prog: 'Reguler B', subj: 'Bahasa Inggris', type: 'privat', tutor: tutorB, loc: 'Ruang Privat', days: [5], start: '19:00', students: [8] },
+    { name: 'Reguler A – SD Kelas 4', level: 'SD', prog: 'SD/MI Reguler A', subj: 'Matematika', type: 'kelompok', tutor: tutorA, loc: 'Ruang 1', days: [1], start: '15:30', students: [0, 9] },
+    { name: 'Reguler A – SD Kelas 5', level: 'SD', prog: 'SD/MI Reguler A', subj: 'IPAS', type: 'kelompok', tutor: tutorA, loc: 'Ruang 2', days: [3], start: '15:30', students: [1] },
+    { name: 'Reguler A – SD Kelas 6', level: 'SD', prog: 'SD/MI Reguler A', subj: 'Matematika', type: 'kelompok', tutor: tutorA, loc: 'Ruang 1', days: [5], start: '16:00', students: [2] },
+    { name: 'Reguler B – SMP Kelas 7', level: 'SMP', prog: 'SD/MI Reguler B', subj: 'Matematika', type: 'kelompok', tutor: tutorA, loc: 'Ruang 3', days: [2, 4], start: '17:00', students: [3] },
+    { name: 'Reguler B – SMP Kelas 8', level: 'SMP', prog: 'SD/MI Reguler B', subj: 'Bahasa Indonesia', type: 'kelompok', tutor: tutorB, loc: 'Ruang 2', days: [2], start: '17:00', students: [4] },
+    { name: 'Reguler B – SMP Kelas 9', level: 'SMP', prog: 'SD/MI Reguler B', subj: 'Bahasa Indonesia', type: 'kelompok', tutor: tutorB, loc: 'Ruang 3', days: [4], start: '17:00', students: [5] },
+    { name: 'Reguler B – SMA Kelas 10', level: 'SMA', prog: 'SD/MI Reguler B', subj: 'Matematika', type: 'kelompok', tutor: tutorA, loc: 'Ruang 4', days: [6], start: '09:00', students: [6] },
+    { name: 'Privat – Anindya (Reguler B)', level: 'SMA', prog: 'SD/MI Reguler B', subj: 'Matematika', type: 'privat', tutor: tutorA, loc: 'Ruang Privat', days: [4], start: '19:00', students: [7] },
+    { name: 'Privat – Rafi (Reguler B)', level: 'SMA', prog: 'SD/MI Reguler B', subj: 'Bahasa Indonesia', type: 'privat', tutor: tutorB, loc: 'Ruang Privat', days: [5], start: '19:00', students: [8] },
   ];
   const insClass = db.prepare(
     `INSERT INTO classes (class_code, name, level, program_id, subject_id, type, tutor_id, location, capacity, status, is_demo) VALUES (?,?,?,?,?,?,?,?,?,'aktif',1)`
@@ -323,7 +328,7 @@ async function main() {
   );
   const matBySubject = {
     'Matematika': ['Pecahan dan operasinya', 'Bilangan bulat dan operasi', 'Bangun datar: luas dan keliling', 'Aljabar dasar: variabel', 'Persamaan linear satu variabel'],
-    'IPA Terpadu': ['Sistem pernapasan manusia', 'Zat dan perubahannya', 'Ekosistem dan rantai makanan', 'Listrik statis dan dinamis'],
+    'IPAS': ['Sistem pernapasan manusia', 'Zat dan perubahannya', 'Ekosistem dan rantai makanan', 'Listrik statis dan dinamis'],
     'Bahasa Inggris': ['Daily expressions & greeting', 'Simple present & past tense', 'Reading comprehension: my hobby', 'Descriptive text'],
     'Bahasa Indonesia': ['Teks deskripsi', 'Kosakata dan ejaan', 'Membaca pemahaman: majas', 'Menulis surat pribadi'],
   };
@@ -362,7 +367,7 @@ async function main() {
     'Matematika': 'Memahami penjumlahan, pengurangan, dan perkalian dasar; pembagian serta soal cerita belum dikuasai.',
     'Bahasa Indonesia': 'Membaca kata sederhana dengan lancar, menulis huruf dan angka dengan benar.',
     'Bahasa Inggris': 'Mengenal alfabet dan kosakata dasar; belum percaya berbicara dalam bahasa Inggris.',
-    'IPA Terpadu': 'Memahami ciri makhluk hidup, lingkungan sekitar, dan peristiwa alam secara dasar.',
+    'IPAS': 'Memahami ciri makhluk hidup, lingkungan sekitar, dan peristiwa alam secara dasar.',
     'IPS Terpadu': 'Mengenal lingkungan sekitar dan kegiatan masyarakat secara sederhana.',
     'Pendidikan Agama Islam': 'Menghafal doa harian dasar dan mengenal huruf hijaiyah.',
     'Pendidikan Kewarganegaraan': 'Memahami aturan kelas, sikap disiplin, dan pentingnya kejujuran.',
@@ -553,8 +558,8 @@ async function main() {
 
   // ========== SETTINGS ==========
   await setSetting('nama_lembaga', 'Bimbel Rumah Pintar');
-  await setSetting('alamat_lembaga', 'Jl. Pendidikan No. 1, Jakarta');
-  await setSetting('telepon_lembaga', '021-555-0123');
+  await setSetting('alamat_lembaga', 'PKD Klumpit Jalan Santren - Grobog');
+  await setSetting('telepon_lembaga', '0858-0055-5885 / 0896-1872-9772');
   await setSetting('metode_pembayaran', JSON.stringify(['Tunai', 'Transfer bank', 'QRIS', 'Lainnya']));
   await setSetting('indicators', JSON.stringify(['Disiplin', 'Tanggung Jawab', 'Motivasi Belajar', 'Kemandirian', 'Kerjasama']));
   await setSetting('scale_labels', JSON.stringify(['Perlu bimbingan', 'Cukup baik', 'Baik', 'Sangat baik']));
