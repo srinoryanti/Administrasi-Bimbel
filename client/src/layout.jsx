@@ -64,7 +64,9 @@ export default function Layout({ title, children }) {
       {/* Sidebar */}
       <aside className={`no-print fixed lg:static inset-y-0 left-0 z-40 w-64 bg-navy text-white flex flex-col transform transition-transform lg:translate-x-0 ${open ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="px-5 py-5 border-b border-white/10 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-white text-navy font-black flex items-center justify-center text-lg shrink-0">RP</div>
+          <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center p-1 shrink-0">
+            <img src="/logo.svg" alt="Logo Bimbel Rumah Pintar" className="w-full h-full" />
+          </div>
           <div className="min-w-0">
             <div className="font-bold leading-tight text-sm">BIMBEL RUMAH PINTAR</div>
             <div className="text-[11px] text-sky-200 truncate">Sistem Informasi Manajemen</div>

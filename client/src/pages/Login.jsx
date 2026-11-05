@@ -39,7 +39,9 @@ export default function Login() {
         <div className="absolute -right-20 -top-20 w-72 h-72 rounded-full bg-sky-500/20" />
         <div className="absolute -left-16 bottom-10 w-56 h-56 rounded-full bg-sky-400/10" />
         <div className="relative">
-          <div className="w-16 h-16 rounded-2xl bg-white text-navy font-black flex items-center justify-center text-2xl mb-6">RP</div>
+          <div className="w-16 h-16 rounded-2xl bg-white flex items-center justify-center p-2 mb-6 shadow-lg">
+            <img src="/logo.svg" alt="Logo Bimbel Rumah Pintar" className="w-full h-full" />
+          </div>
           <h1 className="text-2xl sm:text-3xl font-black leading-tight">BIMBEL RUMAH PINTAR</h1>
           <p className="text-sky-200 mt-2 text-sm">Sistem Informasi Manajemen Bimbel</p>
         </div>
